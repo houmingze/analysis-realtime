@@ -1,16 +1,16 @@
 package com.atguigu.analysis.server.app
 
 import java.lang
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Date}
+import java.util.Calendar
 
 import com.alibaba.fastjson.{JSON, JSONObject}
-import com.atguigu.analysis.server.bean.StartLog
 import com.atguigu.analysis.server.common.Constant
-import com.atguigu.analysis.server.util.{DateTimeUtil, MyKafkaUtils, RedisUtil}
+import com.atguigu.analysis.server.util.{DateTimeUtil, MyKafkaUtils, OffsetManager, RedisUtil}
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.common.TopicPartition
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
+import org.apache.spark.streaming.kafka010.{HasOffsetRanges, OffsetRange}
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import redis.clients.jedis.Jedis
 
@@ -29,9 +29,23 @@ object StartCountApp {
     def main(args: Array[String]): Unit = {
         val conf: SparkConf = new SparkConf().setMaster("local[4]").setAppName("StartCount-App")
         val ssc: StreamingContext = new StreamingContext(conf, Seconds(5))
+        var inputDStream: InputDStream[ConsumerRecord[String, String]] = null
+        val offsetMap: Map[TopicPartition, Long] = OffsetManager.getOffset(Constant.KAFKA_TOPIC_GMALL_START, Constant.GROUP_CONSUMER_START_COUNT)
+        if(offsetMap!=null){
+            inputDStream= MyKafkaUtils.getKafkaStream(Constant.KAFKA_TOPIC_GMALL_START, ssc,offsetMap, Constant.GROUP_CONSUMER_START_COUNT)
+        }else{
+            inputDStream= MyKafkaUtils.getKafkaStream(Constant.KAFKA_TOPIC_GMALL_START, ssc, Constant.GROUP_CONSUMER_START_COUNT)
+        }
 
-        val inputDStream: InputDStream[ConsumerRecord[String, String]] = MyKafkaUtils.getKafkaStream(Constant.KAFKA_TOPIC_GMALL_START, ssc, Constant.GROUP_CONSUMER_START_COUNT)
-        val filterDStream: DStream[JSONObject] = inputDStream.mapPartitions {
+        var offsetRanges: Array[OffsetRange] = Array.empty[OffsetRange]
+        val offsetDStream: DStream[ConsumerRecord[String, String]] = inputDStream.transform {
+            rdd =>
+                val ranges: HasOffsetRanges = rdd.asInstanceOf[HasOffsetRanges]
+                offsetRanges = ranges.offsetRanges
+                rdd
+        }
+
+        val filterDStream: DStream[JSONObject] = offsetDStream.mapPartitions {
             it => {
                 //val format: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH")
                 val cal: Calendar = Calendar.getInstance()
@@ -63,7 +77,13 @@ object StartCountApp {
                 result.toIterator
             }
         }
-        filterDStream.map(_.toJSONString).print(100)
+        //filterDStream.map(_.toJSONString).print(100)
+        filterDStream.foreachRDD{
+            rdd=>{
+                OffsetManager.saveOffset(Constant.KAFKA_TOPIC_GMALL_START,Constant.GROUP_CONSUMER_START_COUNT,offsetRanges)
+            }
+        }
+
         ssc.start()
         ssc.awaitTermination()
 

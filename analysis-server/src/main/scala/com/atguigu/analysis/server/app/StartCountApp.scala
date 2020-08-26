@@ -48,13 +48,11 @@ object StartCountApp {
 
         val filterDStream: DStream[JSONObject] = offsetDStream.mapPartitions {
             it => {
-                println("abc")
                 val cal: Calendar = Calendar.getInstance()
                 val jedis: Jedis = RedisUtil.getJedisClient
                 val result: ListBuffer[JSONObject] = new ListBuffer[JSONObject]
                 it.foreach {
                     record => {
-                        println("aaaa")
                         val logJsonObj: JSONObject = JSON.parseObject(record.value())
                         val ts: lang.Long = logJsonObj.getLong(TS)
 
@@ -78,7 +76,7 @@ object StartCountApp {
         //filterDStream.map(_.toJSONString).print(100)
         filterDStream.foreachRDD{
             rdd=>{
-                rdd.foreachPartition{
+                rdd.foreach{
                     it=>{
 
                     }

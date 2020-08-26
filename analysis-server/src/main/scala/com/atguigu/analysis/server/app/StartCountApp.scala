@@ -29,40 +29,38 @@ object StartCountApp {
     def main(args: Array[String]): Unit = {
         val conf: SparkConf = new SparkConf().setMaster("local[4]").setAppName("StartCount-App")
         val ssc: StreamingContext = new StreamingContext(conf, Seconds(5))
-        var inputDStream: InputDStream[ConsumerRecord[String, String]] = null
+
         val offsetMap: Map[TopicPartition, Long] = OffsetManager.getOffset(Constant.KAFKA_TOPIC_GMALL_START, Constant.GROUP_CONSUMER_START_COUNT)
-        if(offsetMap!=null){
-            inputDStream= MyKafkaUtils.getKafkaStream(Constant.KAFKA_TOPIC_GMALL_START, ssc,offsetMap, Constant.GROUP_CONSUMER_START_COUNT)
-        }else{
-            inputDStream= MyKafkaUtils.getKafkaStream(Constant.KAFKA_TOPIC_GMALL_START, ssc, Constant.GROUP_CONSUMER_START_COUNT)
+        var inputDStream: InputDStream[ConsumerRecord[String, String]] = null
+        if (offsetMap != null) {
+            inputDStream = MyKafkaUtils.getKafkaStream(Constant.KAFKA_TOPIC_GMALL_START, ssc, offsetMap, Constant.GROUP_CONSUMER_START_COUNT)
+        } else {
+            inputDStream = MyKafkaUtils.getKafkaStream(Constant.KAFKA_TOPIC_GMALL_START, ssc, Constant.GROUP_CONSUMER_START_COUNT)
         }
 
-        var offsetRanges: Array[OffsetRange] = Array.empty[OffsetRange]
+        var ranges: Array[OffsetRange] = Array.empty[OffsetRange]
         val offsetDStream: DStream[ConsumerRecord[String, String]] = inputDStream.transform {
-            rdd =>
-                val ranges: HasOffsetRanges = rdd.asInstanceOf[HasOffsetRanges]
-                offsetRanges = ranges.offsetRanges
+            rdd => {
+                ranges = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
                 rdd
+            }
         }
 
         val filterDStream: DStream[JSONObject] = offsetDStream.mapPartitions {
             it => {
-                //val format: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH")
+                println("abc")
                 val cal: Calendar = Calendar.getInstance()
                 val jedis: Jedis = RedisUtil.getJedisClient
                 val result: ListBuffer[JSONObject] = new ListBuffer[JSONObject]
                 it.foreach {
                     record => {
+                        println("aaaa")
                         val logJsonObj: JSONObject = JSON.parseObject(record.value())
                         val ts: lang.Long = logJsonObj.getLong(TS)
 
                         cal.setTimeInMillis(ts)
                         val dayStr: String = DateTimeUtil.getDayStr(cal)
                         val hourStr: String = DateTimeUtil.getHourStr(cal)
-                        //val timeStr: String = format.format(new Date(ts))
-                        //val array: Array[String] = timeStr.split(" ")
-                        //val dayStr = array(0)
-                        //val hourStr = array(1)
                         val mid: String = logJsonObj.getJSONObject(COMMON).getString(MID)
                         val key: String = Constant.KEY_PRE_START_COUNT + dayStr + mid
                         val str: String = jedis.getSet(key, Constant.VALUE_START_COUNT)
@@ -80,7 +78,12 @@ object StartCountApp {
         //filterDStream.map(_.toJSONString).print(100)
         filterDStream.foreachRDD{
             rdd=>{
-                OffsetManager.saveOffset(Constant.KAFKA_TOPIC_GMALL_START,Constant.GROUP_CONSUMER_START_COUNT,offsetRanges)
+                rdd.foreachPartition{
+                    it=>{
+
+                    }
+                }
+                OffsetManager.saveOffset(Constant.KAFKA_TOPIC_GMALL_START,Constant.GROUP_CONSUMER_START_COUNT,ranges)
             }
         }
 

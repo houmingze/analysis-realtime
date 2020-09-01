@@ -1,11 +1,13 @@
 package com.atguigu.analysis.server.app
 
 import java.lang
-import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.{Calendar, Date}
 
 import com.alibaba.fastjson.{JSON, JSONObject}
+import com.atguigu.analysis.server.bean.StartLog
 import com.atguigu.analysis.server.common.Constant
-import com.atguigu.analysis.server.util.{DateTimeUtil, MyKafkaUtils, OffsetManager, RedisUtil}
+import com.atguigu.analysis.server.util.{DateTimeUtil, MyEsUtil, MyKafkaUtils, OffsetManager, RedisUtil}
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.spark.SparkConf
@@ -21,6 +23,10 @@ object StartCountApp {
     val TS = "ts"
     val COMMON = "common"
     val MID = "mid"
+    val UID = "uid"
+    val AR = "ar"
+    val CH = "ch"
+    val VC = "vc"
     val DAY_STR = "dayStr";
     val HOUT_STR = "hourStr";
 
@@ -45,12 +51,11 @@ object StartCountApp {
                 rdd
             }
         }
-
-        val filterDStream: DStream[JSONObject] = offsetDStream.mapPartitions {
+        val filterDStream: DStream[StartLog] = offsetDStream.mapPartitions {
             it => {
                 val cal: Calendar = Calendar.getInstance()
                 val jedis: Jedis = RedisUtil.getJedisClient
-                val result: ListBuffer[JSONObject] = new ListBuffer[JSONObject]
+                val result: ListBuffer[StartLog] = new ListBuffer[StartLog]
                 it.foreach {
                     record => {
                         val logJsonObj: JSONObject = JSON.parseObject(record.value())
@@ -59,13 +64,17 @@ object StartCountApp {
                         cal.setTimeInMillis(ts)
                         val dayStr: String = DateTimeUtil.getDayStr(cal)
                         val hourStr: String = DateTimeUtil.getHourStr(cal)
-                        val mid: String = logJsonObj.getJSONObject(COMMON).getString(MID)
+                        val commonObj: JSONObject = logJsonObj.getJSONObject(COMMON)
+                        val mid: String = commonObj.getString(MID)
                         val key: String = Constant.KEY_PRE_START_COUNT + dayStr + mid
                         val str: String = jedis.getSet(key, Constant.VALUE_START_COUNT)
                         if (str == null) {
-                            logJsonObj.put(DAY_STR, dayStr)
-                            logJsonObj.put(HOUT_STR, hourStr)
-                            result.append(logJsonObj)
+                            val uid: String = commonObj.getString(UID)
+                            val ar: String = commonObj.getString(AR)
+                            val ch: String = commonObj.getString(CH)
+                            val vc: String = commonObj.getString(VC)
+                            val startLog: StartLog = StartLog(mid, uid, ar, ch, vc, dayStr, hourStr, DateTimeUtil.getMiStr(cal), ts)
+                            result.append(startLog)
                         }
                     }
                 }
@@ -73,39 +82,21 @@ object StartCountApp {
                 result.toIterator
             }
         }
-        //filterDStream.map(_.toJSONString).print(100)
-        filterDStream.foreachRDD{
-            rdd=>{
-                rdd.foreach{
-                    it=>{
-
+        filterDStream.foreachRDD {
+            rdd => {
+                val dateStr: String = new SimpleDateFormat("yyyyMMdd").format(new Date())
+                rdd.foreachPartition {
+                    it => {
+                        val startLogWithIdList: List[(StartLog, String)] = it.toList.map(startLog=>(startLog,startLog.mid))
+                        MyEsUtil.saveDocBulk(startLogWithIdList,"gmall_dau_info_"+dateStr)
                     }
                 }
-                OffsetManager.saveOffset(Constant.KAFKA_TOPIC_GMALL_START,Constant.GROUP_CONSUMER_START_COUNT,ranges)
+                OffsetManager.saveOffset(Constant.KAFKA_TOPIC_GMALL_START, Constant.GROUP_CONSUMER_START_COUNT, ranges)
             }
         }
 
         ssc.start()
         ssc.awaitTermination()
-
-
-        /* val filteredDstream: DStream[JSONObject] = jsonObjDstream.mapPartitions { jsonObjItr =>
-             val jedis: Jedis = RedisUtil.getJedisClient // 1 连接池
-             val jsonList: List[JSONObject] = jsonObjItr.toList
-             println("过滤前："+jsonList.size )
-             val filteredList = new ListBuffer[JSONObject]
-             for (jsonObj <- jsonList) {
-                 val dauKey = "dau:" + jsonObj.get("dt")
-                 val mid = jsonObj.getJSONObject("common").getString("mid")
-                 val ifNonExists: lang.Long = jedis.sadd(dauKey, mid)
-                 if (ifNonExists == 1) {
-                     filteredList += jsonObj
-                 }
-             }
-             jedis.close()
-             println("过滤后："+filteredList.size )
-             filteredList.toIterator
-         }*/
     }
 
 }

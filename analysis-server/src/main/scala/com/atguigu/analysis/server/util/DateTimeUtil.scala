@@ -14,4 +14,9 @@ object DateTimeUtil {
         val hour: Int = cal.get(Calendar.HOUR_OF_DAY)
         String.valueOf(hour)
     }
+
+    def getMiStr(cal:Calendar): String={
+        val minute: Int = cal.get(Calendar.MINUTE)
+        String.valueOf(minute)
+    }
 }

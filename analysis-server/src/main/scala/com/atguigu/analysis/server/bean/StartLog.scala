@@ -1,8 +1,15 @@
 package com.atguigu.analysis.server.bean
 
-case class StartLog(common:String,start:String,ts:String){
-    val dayStr:String = ""
-    val hourStr:String = ""
-}
+case class StartLog(
+                          mid:String,
+                          uid:String,
+                          ar:String,
+                          ch:String,
+                          vc:String,
+                          var dt:String,
+                          var hr:String,
+                          var mi:String,
+                          ts:Long) {
 
+}
 

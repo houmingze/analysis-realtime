@@ -91,9 +91,10 @@ object StartCountApp {
                         MyEsUtil.saveDocBulk(startLogWithIdList,"gmall_dau_info_"+dateStr)
                     }
                 }
-                OffsetManager.saveOffset(Constant.KAFKA_TOPIC_GMALL_START, Constant.GROUP_CONSUMER_START_COUNT, ranges)
             }
         }
+
+        OffsetManager.saveOffset(Constant.KAFKA_TOPIC_GMALL_START, Constant.GROUP_CONSUMER_START_COUNT, ranges)
 
         ssc.start()
         ssc.awaitTermination()

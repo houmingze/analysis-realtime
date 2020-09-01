@@ -1,0 +1,10 @@
+server:
+  port: 7072
+
+logging:
+  level:
+    root: error
+spring:
+  elasticsearch:
+    jest:
+      uris: http://hadoop102:9200,http://hadoop103:9200,http://hadoop104:9200

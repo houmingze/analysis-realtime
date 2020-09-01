@@ -11,6 +11,7 @@
     <modules>
         <module>logger</module>
         <module>analysis-server</module>
+        <module>dw-publisher</module>
     </modules>
 
     <parent>

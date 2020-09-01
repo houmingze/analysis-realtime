@@ -28,7 +28,7 @@ object OdsGmallMaxwell {
         }
 
         var ranges: Array[OffsetRange] = null;
-        val offsetDStream: DStream[ConsumerRecord[String, String]] = inputDStream.map {
+        val offsetDStream: DStream[ConsumerRecord[String, String]] = inputDStream.transform {
             rdd => {
                 ranges = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
                 rdd
@@ -45,10 +45,13 @@ object OdsGmallMaxwell {
         jsonObjDStream.foreachRDD{rdd=>
             rdd.foreach{
                 jsonObj=>{
-                    val dataString: String = jsonObj.getString("data")
-                    val table: String = jsonObj.getString("table")
-                    val topic = "ODS_T" + table
-                    MyKafkaSender.send(topic,dataString)
+                    //if(!jsonObj.getString("type").equals("bootstrap-start")&& !jsonObj.getString("type").equals("bootstrap-complete")) {
+                        val dataString: String = jsonObj.getString("data")
+                        println("ods_maxwell:"+dataString)
+                        val table: String = jsonObj.getString("table")
+                        val topic = "ODS_T_" + table
+                        MyKafkaSender.send(topic,dataString)
+                    //}
                 }
             }
             OffsetManager.saveOffset(topic,groupId,ranges)

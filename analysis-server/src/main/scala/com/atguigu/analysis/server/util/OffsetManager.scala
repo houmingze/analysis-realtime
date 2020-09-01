@@ -29,11 +29,13 @@ object OffsetManager {
         val jedis: Jedis = RedisUtil.getJedisClient
         val offsetKey = topic + groupId
         val map: util.HashMap[String, String] = new util.HashMap[String, String]()
-        for(range <- ranges){
-            println(s"保存分区：${range.partition}，偏移量：${range.untilOffset}")
-            map.put(range.partition.toString,range.untilOffset.toString)
+        if(ranges!=null&&ranges.size>0){
+            for(range <- ranges){
+                println(s"保存分区：${range.partition}，偏移量：${range.untilOffset}")
+                map.put(range.partition.toString,range.untilOffset.toString)
+            }
+            jedis.hmset(offsetKey,map)
         }
-        jedis.hmset(offsetKey,map)
     }
 
     def javaMap2ScalaMap(topic:String,offsetMap: util.Map[String, String]): Map[TopicPartition,Long]={

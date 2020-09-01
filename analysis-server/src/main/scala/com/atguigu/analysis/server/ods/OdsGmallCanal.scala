@@ -27,7 +27,7 @@ object OdsGmallCanal {
         }
 
         var ranges: Array[OffsetRange] = null;
-        val offsetDStream: DStream[ConsumerRecord[String, String]] = inputDStream.map {
+        val offsetDStream: DStream[ConsumerRecord[String, String]] = inputDStream.transform {
             rdd => {
                 ranges = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
                 rdd
@@ -45,12 +45,13 @@ object OdsGmallCanal {
             rdd.foreach{
                 jsonObj=>{
                     val dataArray: JSONArray = jsonObj.getJSONArray("data")
-                    if(dataArray!=null && dataArray.size()>0){
+                    if (dataArray != null && dataArray.size() > 0) {
                         val table: String = jsonObj.getString("table")
                         val topic = "ODS_T_" + table.toUpperCase
-                        for(i <- 0 to dataArray.size()-1){
+                        for (i <- 0 to dataArray.size() - 1) {
                             val dataJsonObj: String = dataArray.getString(i)
-                            MyKafkaSender.send(topic,dataJsonObj)
+                            println("ods:"+topic+"-"+dataJsonObj)
+                            MyKafkaSender.send(topic, dataJsonObj)
                         }
                     }
                 }

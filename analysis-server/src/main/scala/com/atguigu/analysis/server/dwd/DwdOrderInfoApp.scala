@@ -1,12 +1,11 @@
 package com.atguigu.analysis.server.dwd
 
-import java.util.{Calendar, Date}
+import java.util.Date
 
 import com.alibaba.fastjson.serializer.SerializeConfig
 import com.alibaba.fastjson.{JSON, JSONObject}
 import com.atguigu.analysis.server.bean.{OrderInfo, UserInfo}
-import com.atguigu.analysis.server.util.{DateTimeUtil, MyEsUtil, MyKafkaSender, MyKafkaUtils, OffsetManager, PhoenixUtil}
-import com.fasterxml.jackson.databind.SerializationConfig
+import com.atguigu.analysis.server.util._
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.spark.SparkConf

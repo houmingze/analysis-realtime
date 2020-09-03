@@ -62,7 +62,6 @@ object DimProvinceInfoApp {
                     Some("hadoop102,hadoop103,hadoop104:2181")
                 )
 
-
                 OffsetManager.saveOffset(topic,groupId,ranges)
 
             }

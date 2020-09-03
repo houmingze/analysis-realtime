@@ -15,7 +15,7 @@ case class OrderInfo(
                       var create_date: String, // 把其他字段处理得到
                       var create_hour: String,
 
-                      //var if_first_order:String, //查询状态得到
+                      var if_first_order:String, //查询状态得到
 
                       var province_name:String,//查询维表得到
                       var province_area_code:String,

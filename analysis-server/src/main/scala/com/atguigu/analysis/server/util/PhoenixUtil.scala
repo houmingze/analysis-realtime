@@ -19,7 +19,7 @@ object PhoenixUtil {
         val conn: Connection = DriverManager.getConnection("jdbc:phoenix:hadoop102,hadoop103,hadoop104:2181")
         val stat: Statement = conn.createStatement
         println(sql)
-        val rs: ResultSet = stat.executeQuery(sql )
+        val rs: ResultSet = stat.executeQuery(sql)
         val md: ResultSetMetaData = rs.getMetaData
         while (  rs.next ) {
             val rowData = new JSONObject();

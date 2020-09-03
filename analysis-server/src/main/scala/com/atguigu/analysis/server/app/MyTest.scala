@@ -22,7 +22,7 @@ object MyTest {
         }
         println(str)
         jedis.close()*/
-        val cal: Calendar = Calendar.getInstance()
+       /* val cal: Calendar = Calendar.getInstance()
         cal.setTimeInMillis(1598351203000L)
         val year: Int = cal.get(Calendar.YEAR)
         val month: Int = cal.get(Calendar.MONTH) + 1
@@ -31,7 +31,8 @@ object MyTest {
         val dayStr: String = s"${year}-${month}-${day}"
         val hourStr: String = String.valueOf(hour)
         println(dayStr)
-        println(hourStr)
+        println(hourStr)*/
+        println(0 to 10)
     }
 
 }

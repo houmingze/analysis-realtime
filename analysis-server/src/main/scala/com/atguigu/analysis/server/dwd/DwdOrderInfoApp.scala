@@ -2,9 +2,11 @@ package com.atguigu.analysis.server.dwd
 
 import java.util.{Calendar, Date}
 
+import com.alibaba.fastjson.serializer.SerializeConfig
 import com.alibaba.fastjson.{JSON, JSONObject}
-import com.atguigu.analysis.server.bean.OrderInfo
-import com.atguigu.analysis.server.util.{DateTimeUtil, MyKafkaUtils, OffsetManager, PhoenixUtil}
+import com.atguigu.analysis.server.bean.{OrderInfo, UserInfo}
+import com.atguigu.analysis.server.util.{DateTimeUtil, MyEsUtil, MyKafkaSender, MyKafkaUtils, OffsetManager, PhoenixUtil}
+import com.fasterxml.jackson.databind.SerializationConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.spark.SparkConf
@@ -14,7 +16,11 @@ import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka010.{HasOffsetRanges, OffsetRange}
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 
+import scala.collection.mutable
+
 object DwdOrderInfoApp {
+
+    private val serializeConfig: SerializeConfig = new SerializeConfig(true)
 
     def main(args: Array[String]): Unit = {
 
@@ -71,7 +77,56 @@ object DwdOrderInfoApp {
                 orderRDD
             }
         }
-        orderInfoWithProvinceDStream.print(100)
+
+        orderInfoWithProvinceDStream.foreachRDD{
+            rdd=>{
+                rdd.foreachPartition{
+                    it=>{
+                        val orderInfoList: List[OrderInfo] = it.toList
+                        var userIds = mutable.Set[Long]()
+                        orderInfoList.foreach{ orderInfo=>
+                            userIds.add(orderInfo.user_id)
+                        }
+                        var userMap: Map[String, UserInfo] = null
+                        if(userIds != null && userIds.size >0 ){
+                            val userIdStr: String = userIds.map(id=>s"'${id}'").mkString(",")
+                            val querySql = s"select * from gmall_user_info where id in (${userIdStr})"
+                            val objects: List[JSONObject] = PhoenixUtil.queryList(querySql)
+                            if(objects != null && objects.size > 0){
+                                userMap = objects.map(obj => (obj.getString("ID"), JSON.parseObject(obj.toJSONString, classOf[UserInfo]))).toMap
+                            }
+                        }
+                        orderInfoList.foreach{ orderInfo=>
+                            if(userMap != null && userMap.size >0 ){
+                                val userInfo: UserInfo = userMap.getOrElse(orderInfo.user_id.toString,null)
+                                var user_age_group:String = null
+                                var user_gender:String = null
+                                if(userInfo != null){
+                                    userInfo.gender match {
+                                        case "F" => user_gender = "女"
+                                        case "M" => user_gender = "男"
+                                        case _ =>
+                                    }
+                                    if(userInfo.birthday != null){
+                                        val year: Int = userInfo.birthday.substring(0, 4).toInt
+                                        val age: Int = DateTimeUtil.getAge(year)
+                                        user_age_group = DateTimeUtil.getAgeGroup(age)
+                                    }
+                                }
+                                orderInfo.user_age_group = user_age_group
+                                orderInfo.user_gender = user_gender
+                            }
+                            val topic = "DWD_ORDER_INFO"
+                            MyKafkaSender.send(topic,JSON.toJSONString(orderInfo,serializeConfig))
+                        }
+                        val dateStr: String = DateTimeUtil.newFormat.format(new Date())
+                        val orders: List[(OrderInfo, String)] = orderInfoList.map(order => (order, order.id.toString))
+                        MyEsUtil.saveDocBulk(orders,"gmall_order_info"+dateStr)
+                    }
+                }
+                OffsetManager.saveOffset(topic,groupId,ranges)
+            }
+        }
 
         ssc.start()
         ssc.awaitTermination()

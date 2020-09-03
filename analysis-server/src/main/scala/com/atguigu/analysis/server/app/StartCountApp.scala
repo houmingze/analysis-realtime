@@ -84,7 +84,7 @@ object StartCountApp {
         }
         filterDStream.foreachRDD {
             rdd => {
-                val dateStr: String = new SimpleDateFormat("yyyyMMdd").format(new Date())
+                val dateStr: String = DateTimeUtil.newFormat.format(new Date())
                 rdd.foreachPartition {
                     it => {
                         val startLogWithIdList: List[(StartLog, String)] = it.toList.map(startLog=>(startLog,startLog.mid))

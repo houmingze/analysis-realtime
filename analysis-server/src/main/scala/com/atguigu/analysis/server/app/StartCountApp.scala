@@ -8,9 +8,11 @@ import com.alibaba.fastjson.{JSON, JSONObject}
 import com.atguigu.analysis.server.bean.StartLog
 import com.atguigu.analysis.server.common.Constant
 import com.atguigu.analysis.server.util.{DateTimeUtil, MyEsUtil, MyKafkaUtils, OffsetManager, RedisUtil}
+import org.apache.commons.collections.CollectionUtils
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.catalyst.util.StringUtils
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka010.{HasOffsetRanges, OffsetRange}
 import org.apache.spark.streaming.{Seconds, StreamingContext}

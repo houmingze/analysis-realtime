@@ -95,7 +95,7 @@ object DwdOrderDetailApp {
                                 orderDetail.spu_name = spuInfoJsonObj.getString("SPU_NAME")
 
                                 val topic = "DWD_ORDER_DETAIL"
-                                MyKafkaSender.send(topic, JSON.toJSONString(orderDetail, serializeConfig))
+                                MyKafkaSender.send(topic, orderDetail.order_id.toString, JSON.toJSONString(orderDetail, serializeConfig))
 
                             }
                         }

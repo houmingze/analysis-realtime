@@ -118,9 +118,9 @@ object DwdOrderInfoApp {
                             val topic = "DWD_ORDER_INFO"
                             MyKafkaSender.send(topic,JSON.toJSONString(orderInfo,serializeConfig))
                         }
-                        val dateStr: String = DateTimeUtil.newFormat.format(new Date())
-                        val orders: List[(OrderInfo, String)] = orderInfoList.map(order => (order, order.id.toString))
-                        MyEsUtil.saveDocBulk(orders,"gmall_order_info"+dateStr)
+                        //val dateStr: String = DateTimeUtil.newFormat.format(new Date())
+                       // val orders: List[(OrderInfo, String)] = orderInfoList.map(order => (order, order.id.toString))
+                        //MyEsUtil.saveDocBulk(orders,"gmall_order_info"+dateStr)
                     }
                 }
                 OffsetManager.saveOffset(topic,groupId,ranges)

@@ -99,9 +99,9 @@ object DwdOrderDetailApp {
 
                             }
                         }
-                        val dateStr: String = DateTimeUtil.newFormat.format(new Date())
-                        val orders: List[(OrderDetail, String)] = orderDetails.map(order => (order, order.id.toString))
-                        MyEsUtil.saveDocBulk(orders, "gmall_order_detail" + dateStr)
+                        //val dateStr: String = DateTimeUtil.newFormat.format(new Date())
+                        //val orders: List[(OrderDetail, String)] = orderDetails.map(order => (order, order.id.toString))
+                        //MyEsUtil.saveDocBulk(orders, "gmall_order_detail" + dateStr)
                     }
                 }
                 OffsetManager.saveOffset(topic, groupId, ranges)

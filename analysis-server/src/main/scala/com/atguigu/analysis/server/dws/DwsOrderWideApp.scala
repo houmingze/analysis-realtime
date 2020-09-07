@@ -1,6 +1,7 @@
 package com.atguigu.analysis.server.dws
 
 import java.util
+import java.util.Properties
 
 import com.alibaba.fastjson.JSON
 import com.atguigu.analysis.server.bean.{OrderDetail, OrderInfo, OrderWide}
@@ -9,6 +10,7 @@ import org.apache.commons.collections.{CollectionUtils, MapUtils}
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka010.{HasOffsetRanges, OffsetRange}
 import org.apache.spark.streaming.{Seconds, StreamingContext}
@@ -103,7 +105,25 @@ object DwsOrderWideApp {
             orderWides.toIterator
         }
 
+        filterDStream.cache()
         filterDStream.print(1000)
+
+        val sparkSession: SparkSession = SparkSession.builder().appName("order_wide_spark_app").getOrCreate()
+        import sparkSession.implicits._
+
+        filterDStream.foreachRDD{rdd=>
+            var prop= new Properties()
+            prop.setProperty("user","default")
+            prop.setProperty("password","zaijian")
+            prop.setProperty("driver", "ru.yandex.clickhouse.ClickHouseDriver")
+            val df: DataFrame = rdd.toDF()
+            df.write.mode(SaveMode.Append)
+                    .option("batchsize", "100")
+                    .option("isolationLevel", "NONE") // 设置事务
+                    .option("numPartitions", "4") // 设置并发
+                    .jdbc("jdbc:clickhouse://hadoop102:8123/gmall", "order_wide", prop)
+        }
+
         OffsetManager.saveOffset(topicOrderInfo, groupId, orderInfoRanges)
         OffsetManager.saveOffset(topicOrderDetail, groupId, orderDetailRanges)
 

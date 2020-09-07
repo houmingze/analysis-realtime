@@ -1,5 +1,7 @@
 package com.atguigu.analysis.server.common
 
+import scala.collection.mutable.ArrayBuffer
+
 object Constant {
 
     val KAFKA_TOPIC_GMALL_START = "GMALL_START";
@@ -9,5 +11,7 @@ object Constant {
 
     val KEY_PRE_START_COUNT = "START_COUNT_"
     val VALUE_START_COUNT = "1"
+
+    val TABLE_NAMES = ArrayBuffer[String]("order_info","order_detail")
 
 }

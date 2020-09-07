@@ -1,6 +1,7 @@
 package com.atguigu.analysis.server.ods
 
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
+import com.atguigu.analysis.server.common.Constant
 import com.atguigu.analysis.server.util.{MyKafkaSender, MyKafkaUtils, OffsetManager}
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
@@ -44,14 +45,17 @@ object OdsGmallCanal {
         jsonObjDStream.foreachRDD{ rdd=>
             rdd.foreach{
                 jsonObj=>{
-                    val dataArray: JSONArray = jsonObj.getJSONArray("data")
-                    if (dataArray != null && dataArray.size() > 0) {
-                        val table: String = jsonObj.getString("table")
-                        val topic = "ODS_T_" + table.toUpperCase
-                        for (i <- 0 to dataArray.size() - 1) {
-                            val dataJsonObj: String = dataArray.getString(i)
-                            println("ods:"+topic+"-"+dataJsonObj)
-                            MyKafkaSender.send(topic, dataJsonObj)
+                    val opType: String = jsonObj.getString("type")
+                    val table: String = jsonObj.getString("table")
+                    if(opType!=null && opType == "INSERT" &&table !=null && Constant.TABLE_NAMES.contains(table)){
+                        val dataArray: JSONArray = jsonObj.getJSONArray("data")
+                        if (dataArray != null && dataArray.size() > 0) {
+                            val topic = "ODS_T_" + table.toUpperCase
+                            for (i <- 0 to dataArray.size() - 1) {
+                                val dataJsonObj: String = dataArray.getString(i)
+                                println(table + dataJsonObj)
+                                MyKafkaSender.send(topic, dataJsonObj)
+                            }
                         }
                     }
                 }

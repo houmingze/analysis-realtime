@@ -8,3 +8,12 @@ spring:
   elasticsearch:
     jest:
       uris: http://hadoop102:9200,http://hadoop103:9200,http://hadoop104:9200
+  datasource:
+    driver-class-name: ru.yandex.clickhouse.ClickHouseDriver
+    url: jdbc:clickhouse://hadoop102:8123/gmall?useUnicode=true&characterEncoding=utf-8&useSSL=true
+    username: default
+    password: zaijian
+mybatis:
+  mapper-locations: classpath:com/atguigu/publisher/dao/**/*.xml
+  type-aliases-package: com.atguigu.publisher.dao
+  config-location: classpath:mybatis-config.xml
